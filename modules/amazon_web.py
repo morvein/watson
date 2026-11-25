@@ -5,7 +5,7 @@ from urllib.parse import parse_qs, urljoin, urlsplit
 
 from bs4 import BeautifulSoup
 
-from .base import LookupResult, failure_result
+from .base import LookupResult, browser_failure_result, failure_result
 from .common import HttpFailure, Result, Status, parse_retry_after
 
 
@@ -236,10 +236,7 @@ class AmazonWebAdapter:
             return Result(self.name, Status.UNKNOWN, self.method, "Unrecognized Amazon response; registration status is unknown.",
                           source_url=LOGIN_URL, error_code="unrecognized_amazon_response")
         except Exception as error:
-            timeout = "timeout" in type(error).__name__.lower()
-            return Result(self.name, Status.USER_ACTION_REQUIRED, self.method,
-                          "Amazon lookup did not finish. For manual CAPTCHA use --amazon-interactive; check Chrome and dependencies.",
-                          source_url=LOGIN_URL, error_code="amazon_timeout" if timeout else "amazon_browser_unavailable")
+            return browser_failure_result(self, error, phone)
 
 
 adapter = AmazonWebAdapter()

@@ -5,20 +5,20 @@
 <h1 align="center">Watson</h1>
 
 <p align="center">
-  <strong>Phone account lookups with clear terminal results.</strong><br>
+  <strong>CLI tool for phone number account lookups.</strong><br>
   Check supported services, follow live progress, and export results as JSON.
 </p>
 
 <p align="center">
   <code>Python 3.11+</code> &nbsp;·&nbsp;
-  <code>Windows CLI</code> &nbsp;·&nbsp;
+  <code>Supported OS: Windows &amp; Linux</code> &nbsp;·&nbsp;
   <code>Text &amp; JSON</code> &nbsp;·&nbsp;
   <code>7 services</code>
 </p>
 
 <p align="center">
   <a href="#demo">Demo</a> &nbsp;·&nbsp;
-  <a href="#quick-start">Quick start</a> &nbsp;·&nbsp;
+  <a href="#installation">Installation</a> &nbsp;·&nbsp;
   <a href="#supported-services">Services</a> &nbsp;·&nbsp;
   <a href="#usage">Usage</a> &nbsp;·&nbsp;
   <a href="#options">Options</a>
@@ -29,27 +29,68 @@
 ## Demo
 
 <p align="center">
-  <img src=".github/assets/watsongif.gif" alt="Watson command, live progress, and lookup results in the terminal" width="686">
+  <img src=".github/assets/watsongif.gif" alt="Watson lookup with live progress and results" width="686">
 </p>
 
 The recording shows one run. Results depend on each service's response at the time of the lookup.
 
-## Quick start
+## Installation
 
-**Requirements:** Python 3.11 or newer. Install Google Chrome to use the Amazon and Snapchat checks.
+**Requirements:** Python 3.11 or newer, Git, and an internet connection. Amazon and Snapchat also require Google Chrome.
 
-From the Watson folder, create the environment and install the dependencies:
+### Windows
+
+Install [Python](https://www.python.org/downloads/windows/), [Git for Windows](https://git-scm.com/downloads/win), and [Google Chrome](https://www.google.com/chrome/). Then download Watson and install its dependencies in PowerShell:
 
 ```powershell
+git clone https://github.com/morvein/watson.git
+cd watson
 py -3 -m venv .venv
-.venv\Scripts\python -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\watson.cmd PHONE_NUMBER
 ```
 
+The launcher uses Watson's own `.venv`; activating it manually is unnecessary.
+To use `watson` from any directory, add the folder containing `watson.cmd` to your user `PATH` and reopen your shell.
+
+### Linux
+
+The commands below target **Ubuntu 24.04+ / Debian 12+ on x86-64**, with Python 3.11 or newer. Windows has been tested; Linux end-to-end checks have not yet been verified.
+
+Install the prerequisites, download Watson, and create a local environment:
+
+```bash
+sudo apt update
+sudo apt install -y git python3 python3-venv python3-pip
+
+git clone https://github.com/morvein/watson.git
+cd watson
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+```
+
+For Amazon and Snapchat, install the browser's system dependencies:
+
+```bash
+.venv/bin/python -m playwright install-deps chromium
+```
+
+If Google Chrome is not already installed, install it with:
+
+```bash
+.venv/bin/python -m playwright install chrome
+```
+
+Run Watson from the project folder:
+
+```bash
+.venv/bin/python watson.py PHONE_NUMBER
+```
+
+Create `.venv` separately on each machine. Python environments are specific to the operating system and installation location.
+
 Replace `PHONE_NUMBER` with your own number in international format, including `+`.
 Use `--region` with an ISO country code if the number has no international prefix.
-
-To use `watson` from any directory, add the folder containing `watson.cmd` to your user `PATH` and open a new terminal. The launcher uses the local `.venv`; activating it manually is unnecessary.
 
 ## Supported services
 
@@ -66,6 +107,8 @@ To use `watson` from any directory, add the folder containing `watson.cmd` to yo
 Select one or combine several service flags. The default run checks **six services**; Zoho runs only when requested.
 
 ## Usage
+
+The examples use the Windows `watson` shortcut. On Linux, replace `watson` with `.venv/bin/python watson.py` while in the project folder; the same flags apply.
 
 ### Run a lookup
 
@@ -92,7 +135,7 @@ Use either `--services` or individual service flags in a command.
 # Print compact JSON
 watson PHONE_NUMBER --json
 
-# Save JSON while keeping normal terminal output
+# Save JSON while keeping formatted output
 watson PHONE_NUMBER --output results.json
 ```
 
@@ -117,7 +160,7 @@ watson normalize PHONE_NUMBER
 
 The live progress bar shows completed checks, elapsed time, estimated remaining time, and checks per second.
 
-| Marker | Terminal color | Meaning |
+| Marker | Color | Meaning |
 | :---: | --- | --- |
 | `[+]` | Green | Registered — the service recognized the identifier at the lookup step |
 | `[-]` | Purple | Not registered — the service did not find the identifier at that step |
@@ -149,7 +192,7 @@ The number and results in this JSON example are fictional. JSON includes each se
 
 | Option or command | Purpose |
 | --- | --- |
-| `--json` | Print compact JSON instead of normal terminal output |
+| `--json` | Print compact JSON instead of formatted output |
 | `--output FILE` | Save results as JSON as checks complete |
 | `--details` | Show additional fields and per-service timing |
 | `--region CODE` | Set an ISO region for a number without `+` |

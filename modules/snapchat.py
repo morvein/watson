@@ -3,7 +3,7 @@ import asyncio
 import sys
 from urllib.parse import urlsplit
 
-from .base import failure_result
+from .base import browser_failure_result, failure_result
 from .common import HttpFailure, Result, Status
 
 
@@ -252,20 +252,12 @@ class SnapchatAdapter:
             return Result(self.name, status, self.method, reason, source_url=LOGIN)
         except HttpFailure as error:
             return failure_result(self, error)
-        except ImportError:
-            return Result(self.name, Status.USER_ACTION_REQUIRED, self.method,
-                          "Install dependencies: python -m pip install -r requirements.txt",
-                          source_url=LOGIN, error_code="missing_browser_dependency")
         except (ValueError, TypeError, KeyError):
             return Result(self.name, Status.UNKNOWN, self.method,
                           "Unrecognized Snapchat response; registration status is unknown.",
                           source_url=LOGIN, error_code="unrecognized_snapchat_response")
         except Exception as error:
-            # Includes missing Chrome, a changed form, CAPTCHA and a timeout.
-            timeout = "timeout" in type(error).__name__.lower()
-            return Result(self.name, Status.USER_ACTION_REQUIRED if not timeout else Status.UNKNOWN,
-                          self.method, "Snapchat browser lookup did not finish; registration status is unknown. Check Chrome or open the form manually.",
-                          source_url=LOGIN, error_code="snapchat_timeout" if timeout else "snapchat_browser_unavailable")
+            return browser_failure_result(self, error, phone)
 
 
 adapter = SnapchatAdapter()

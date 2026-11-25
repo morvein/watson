@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import Protocol
 import asyncio
 import json
+import re
 from urllib.parse import urljoin
 
 import httpx
@@ -56,6 +57,50 @@ def failure_result(adapter, error):
         status, reason = Status.ERROR, "Could not obtain a reliable API response; link status is unknown."
     return Result(adapter.name, status, adapter.method, reason, source_url=adapter.source_url,
                   retry_after=error.retry_after, error_code=error.code)
+
+
+def browser_failure_result(adapter, error, phone):
+    """Explain browser failures without reporting a CAPTCHA or an account result."""
+    kind = type(error).__name__
+    message = str(error)
+    diagnostic = message.splitlines()[0] if message else kind
+    for value in (phone.e164, phone.e164.lstrip("+"), phone.national):
+        if value:
+            diagnostic = diagnostic.replace(value, "[number]")
+    diagnostic = re.sub(r"https?://\S+", "[service URL]", diagnostic)
+    diagnostic = re.sub(r"(?i)\b[A-Z]:[\\/][^\r\n\"<>]*", "[local path]", diagnostic)
+    diagnostic = re.sub(r"(?<!\w)/(?:Users|home|tmp|var)/\S+", "[local path]", diagnostic)
+    diagnostic = " ".join(diagnostic.split())[:200]
+    detail = f"{kind}: {diagnostic}" if diagnostic != kind else kind
+    name = adapter.name.capitalize()
+    status = Status.UNKNOWN
+    code = f"{adapter.name}_browser_unavailable"
+    if isinstance(error, ImportError):
+        status = Status.USER_ACTION_REQUIRED
+        code = "missing_browser_dependency"
+        reason = "Browser dependencies are missing. Install requirements.txt in the Python environment used to run Watson."
+    elif isinstance(error, NotImplementedError):
+        status = Status.USER_ACTION_REQUIRED
+        code = f"{adapter.name}_unsupported_event_loop"
+        reason = "This Python event loop cannot start the browser driver subprocess. Use a normal terminal with a supported event loop."
+    elif "executable doesn't exist" in message.lower() or ("distribution 'chrome'" in message.lower() and "not found" in message.lower()):
+        status = Status.USER_ACTION_REQUIRED
+        code = f"{adapter.name}_chrome_not_found"
+        reason = "Google Chrome was not found. Install Chrome for this operating system."
+    elif isinstance(error, PermissionError):
+        status = Status.USER_ACTION_REQUIRED
+        code = f"{adapter.name}_browser_permission_denied"
+        reason = "The operating system denied access to the browser or its driver."
+    elif isinstance(error, TimeoutError) or "timeout" in kind.lower():
+        code = f"{adapter.name}_timeout"
+        reason = "The browser check timed out; registration status is unknown."
+    elif "net::ERR_" in message:
+        code = f"{adapter.name}_browser_network_error"
+        reason = "The browser could not reach the service; registration status is unknown."
+    else:
+        reason = "The browser check failed; registration status is unknown."
+    return Result(adapter.name, status, adapter.method, f"{name}: {reason} Details: {detail}",
+                  source_url=adapter.source_url, error_code=code)
 
 
 def html_page(text):
